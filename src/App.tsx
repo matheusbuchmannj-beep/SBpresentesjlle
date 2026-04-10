@@ -60,6 +60,7 @@ interface Settings {
   whatsappNumber: string;
   instagram: string;
   bannerUrl: string;
+  logoUrl?: string;
   shippingInfo: string;
   joinvilleOnlyInfo: string;
   photoInfo: string;
@@ -114,7 +115,10 @@ const Navbar = ({ onAdminClick, cartCount, onCartClick }: { onAdminClick: () => 
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-premium-beige">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xl font-serif font-bold tracking-tight text-premium-brown">{settings?.storeName || 'SB Presentes'}</span>
+          {settings?.logoUrl && (
+            <img src={settings.logoUrl} alt="Logo" className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
+          )}
+          <span className="text-xl font-serif font-bold tracking-tight text-premium-brown">{settings?.storeName || 'SB PRESENTES'}</span>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
           <button onClick={onAdminClick} className="text-[10px] sm:text-xs uppercase tracking-widest text-premium-warm-brown font-medium">Admin</button>
@@ -953,9 +957,17 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
-  
+  const [isSaving, setIsSaving] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return unsubAuth;
+  }, []);
 
   useEffect(() => {
     if (isAuthorized) {
@@ -995,18 +1007,44 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settings) return;
+    
+    if (!currentUser) {
+      alert('Você precisa estar autenticado com o Google para salvar alterações no banco de dados.');
+      return;
+    }
+
+    setIsSaving(true);
     try {
       const { id, ...data } = settings;
       await setDoc(doc(db, 'settings', 'global'), data);
-      alert('Configurações salvas!');
+      alert('Configurações salvas com sucesso!');
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, 'settings/global');
+      console.error('Erro ao salvar configurações:', error);
+      alert('Erro ao salvar: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error('Erro no login Google:', error);
+      alert('Erro ao fazer login com Google');
     }
   };
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
+    
+    if (!currentUser) {
+      alert('Você precisa estar autenticado com o Google para salvar produtos.');
+      return;
+    }
+
     try {
       if (editingProduct.id) {
         const { id, ...data } = editingProduct;
@@ -1027,6 +1065,11 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
   };
 
   const toggleProductStatus = async (product: Product) => {
+    if (!currentUser) {
+      alert('Você precisa estar autenticado com o Google para alterar o status.');
+      return;
+    }
+    
     try {
       await updateDoc(doc(db, 'products', product.id), { active: !product.active });
     } catch (error) {
@@ -1105,6 +1148,30 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {currentUser && (
+          <div className="mb-6 flex items-center justify-between bg-white p-4 rounded-2xl border border-premium-beige">
+            <div className="flex items-center gap-3">
+              {currentUser.photoURL && <img src={currentUser.photoURL} alt="" className="w-8 h-8 rounded-full" />}
+              <div>
+                <p className="text-xs font-bold text-premium-brown">{currentUser.displayName}</p>
+                <p className="text-[10px] text-premium-warm-brown">{currentUser.email}</p>
+              </div>
+            </div>
+            <button onClick={() => signOut(auth)} className="text-[10px] uppercase tracking-widest text-red-500 font-bold">Sair</button>
+          </div>
+        )}
+
+        {!currentUser && activeTab === 'settings' && (
+          <div className="mb-6 p-6 bg-premium-terracotta/5 rounded-2xl border border-premium-terracotta/20 text-center">
+            <p className="text-sm text-premium-brown mb-4">Para salvar alterações, você precisa estar autenticado como administrador.</p>
+            <button 
+              onClick={handleGoogleLogin}
+              className="premium-button-secondary flex items-center gap-2 mx-auto"
+            >
+              <Instagram size={18} /> Login com Google Admin
+            </button>
+          </div>
+        )}
         {activeTab === 'orders' && (
           <div className="space-y-4">
             <h3 className="text-2xl font-serif text-premium-brown mb-6">Gestão de Pedidos</h3>
@@ -1159,6 +1226,12 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
                 Novo Produto
               </button>
             </div>
+            {!currentUser && (
+              <div className="p-4 bg-premium-terracotta/5 rounded-2xl border border-premium-terracotta/20 text-center">
+                <p className="text-xs text-premium-brown mb-2">Você precisa estar logado com Google para salvar alterações.</p>
+                <button onClick={handleGoogleLogin} className="text-xs font-bold text-premium-terracotta underline">Fazer Login com Google</button>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {products.map(product => (
                 <div key={product.id} className="premium-card">
@@ -1193,6 +1266,18 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
                   onChange={e => setSettings({...settings, storeName: e.target.value})} 
                   className="premium-input" 
                 />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-widest text-premium-warm-brown">Logo da Loja (Ícone da Aba)</label>
+                <div className="flex gap-2">
+                  <input 
+                    value={settings.logoUrl || ''} 
+                    onChange={e => setSettings({...settings, logoUrl: e.target.value})} 
+                    className="premium-input flex-grow" 
+                  />
+                </div>
+                <ImageUpload onUpload={(url) => setSettings({...settings, logoUrl: url})} />
+                <p className="text-[10px] text-premium-warm-brown italic mt-1">Este ícone aparecerá na aba do navegador.</p>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase tracking-widest text-premium-warm-brown">Banner Principal (URL da Foto)</label>
@@ -1340,7 +1425,13 @@ const AdminPanel = ({ onBack }: { onBack: () => void }) => {
                 </div>
               </div>
 
-              <button type="submit" className="w-full premium-button-primary">Salvar Alterações</button>
+              <button 
+                type="submit" 
+                disabled={isSaving}
+                className="w-full premium-button-primary flex items-center justify-center gap-2"
+              >
+                {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
             </div>
           </form>
         )}
@@ -1493,6 +1584,21 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (settings?.storeName) {
+      document.title = settings.storeName;
+    }
+    if (settings?.logoUrl) {
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = settings.logoUrl;
+    }
+  }, [settings]);
+
+  useEffect(() => {
     const q = query(collection(db, 'products'), where('active', '==', true), orderBy('order', 'asc'));
     const unsubProducts = onSnapshot(q, (snapshot) => {
       setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
@@ -1507,10 +1613,11 @@ export default function App() {
       } else {
         // Seed default settings if they don't exist
         const defaultSettings: Omit<Settings, 'id'> = {
-          storeName: 'SB Presentes',
+          storeName: 'SB PRESENTES',
           whatsappNumber: WHATSAPP_NUMBER,
           instagram: 'https://instagram.com',
           bannerUrl: 'https://picsum.photos/seed/mother/1920/1080',
+          logoUrl: '',
           shippingInfo: 'O valor do frete é calculado com base no seu bairro e será informado durante o atendimento no WhatsApp.',
           joinvilleOnlyInfo: 'Apenas Joinville/SC',
           photoInfo: 'Personalizado com foto enviada pelo cliente após o pedido.',
