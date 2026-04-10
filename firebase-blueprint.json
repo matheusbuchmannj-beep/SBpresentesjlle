@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A product available for sale in the store",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Product name" },
+        "descriptionShort": { "type": "string", "description": "Short description for cards" },
+        "descriptionFull": { "type": "string", "description": "Full detailed description" },
+        "style": { "type": "string", "description": "Product style (e.g. Aquarela)" },
+        "price": { "type": "number", "description": "Base product price" },
+        "imageUrl": { "type": "string", "description": "Main product image URL" },
+        "images": { "type": "array", "items": { "type": "string" }, "description": "Gallery images" },
+        "active": { "type": "boolean", "description": "Whether the product is visible" },
+        "featured": { "type": "boolean", "description": "Whether to show on home page" },
+        "order": { "type": "integer", "description": "Display order" },
+        "category": { "type": "string", "description": "Product category" }
+      },
+      "required": ["name", "price", "imageUrl", "active"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A customer order",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "bairro": { "type": "string" },
+        "address": { "type": "string" },
+        "complement": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "occasion": { "type": "string" },
+        "items": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "name": { "type": "string" },
+              "price": { "type": "number" },
+              "quantity": { "type": "integer" },
+              "size": { "type": "string" },
+              "imageUrl": { "type": "string" }
+            }
+          }
+        },
+        "observations": { "type": "string" },
+        "deliveryDate": { "type": "string" },
+        "deliveryPeriod": { "type": "string", "enum": ["manhã", "tarde", "noite"] },
+        "deliveryType": { "type": "string", "enum": ["entrega", "retirada"] },
+        "paymentMethod": { "type": "string", "enum": ["Pix", "Link de pagamento"] },
+        "status": { "type": "string", "enum": ["novo", "aguardando confirmação", "em produção", "pronto", "saiu para entrega", "finalizado", "cancelado"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "total": { "type": "number" }
+      },
+      "required": ["customerName", "customerPhone", "address", "items", "status"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global store settings",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "instagram": { "type": "string" },
+        "bannerUrl": { "type": "string" },
+        "shippingInfo": { "type": "string" },
+        "joinvilleOnlyInfo": { "type": "string" },
+        "photoInfo": { "type": "string" },
+        "deadlineInfo": { "type": "string" },
+        "paymentLinkInfo": { "type": "string" },
+        "categories": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "List of product categories"
+        },
+        "variations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "price": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "products": {
+      "schema": "Product",
+      "description": "Collection of products"
+    },
+    "orders": {
+      "schema": "Order",
+      "description": "Collection of orders"
+    },
+    "settings": {
+      "schema": "Settings",
+      "description": "Global settings document"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  
+  --color-premium-beige: #f5f2ed;
+  --color-premium-offwhite: #faf9f6;
+  --color-premium-terracotta: #c97c5d;
+  --color-premium-brown: #5c4033;
+  --color-premium-warm-brown: #8b5e3c;
+}
+
+@layer base {
+  body {
+    @apply bg-premium-offwhite text-premium-brown font-sans;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+.premium-card {
+  @apply bg-white rounded-3xl shadow-sm border border-premium-beige overflow-hidden transition-all duration-300 hover:shadow-md;
+}
+
+.premium-button-primary {
+  @apply px-6 py-3 rounded-full font-medium transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:pointer-events-none bg-premium-terracotta text-white hover:opacity-90;
+}
+
+.premium-button-secondary {
+  @apply px-6 py-3 rounded-full font-medium transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:pointer-events-none border border-premium-terracotta text-premium-terracotta hover:bg-premium-beige;
+}
+
+.premium-input {
+  @apply w-full px-4 py-3 rounded-xl border border-premium-beige focus:outline-none focus:ring-2 focus:ring-premium-terracotta/20 focus:border-premium-terracotta bg-white transition-all;
+}
+

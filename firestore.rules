@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: products
+    // Fields: name, descriptionShort, descriptionFull, price, imageUrl, active, featured, order, category
+    //
+    // Collection: orders
+    // Fields: customerName, customerPhone, bairro, address, complement, recipientName, occasion, items, observations, deliveryDate, deliveryPeriod, deliveryType, paymentMethod, status, createdAt, total
+    //
+    // Collection: settings
+    // Fields: storeName, whatsappNumber, instagram, bannerUrl, shippingInfo, joinvilleOnlyInfo, photoInfo, deadlineInfo, paymentLinkInfo, categories, variations
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "jmatheusbuchmann@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.price is number && data.price >= 0 &&
+             data.imageUrl is string &&
+             data.active is bool &&
+             (!('category' in data) || data.category is string);
+    }
+
+    function isValidOrder(data) {
+      return data.customerName is string && data.customerName.size() > 0 &&
+             data.customerPhone is string &&
+             data.address is string &&
+             data.items is list && data.items.size() > 0 &&
+             data.status in ["novo", "aguardando confirmação", "em produção", "pronto", "saiu para entrega", "finalizado", "cancelado"];
+    }
+
+    // Rules
+    match /products/{productId} {
+      allow read: if resource.data.active == true || isAdmin();
+      allow write: if isAdmin() && isValidProduct(request.resource.data);
+    }
+
+    match /orders/{orderId} {
+      allow create: if isValidOrder(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+  }
+}
